@@ -8,6 +8,7 @@ Based loosely on http://jmlr.org/papers/volume11/ben-haim10a/ben-haim10a.pdf.
 package ghist
 
 import (
+	"math"
 	"sort"
 )
 
@@ -29,7 +30,11 @@ var zero = Bin{} // for empty comparisons
 
 // Add adds a float64 value to the histogram, modifying it as necessary
 func (h *Histogram) Add(value float64) {
-	h.Count += 1
+	if h.Count < math.MaxUint64 {
+		h.Count += 1
+	} else {
+		panic("Integer overflow: Maximum count exceeded in ghist Histogram")
+	}
 	// see if it fits in an existing bin
 	index := sort.Search(len(h.bins), func(i int) bool { return value >= h.bins[i].min })
 	if index < len(h.bins) && h.bins[index].max >= value {
