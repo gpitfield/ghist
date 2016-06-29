@@ -30,11 +30,11 @@ var zero = Bin{} // for empty comparisons
 
 // Add adds a float64 value to the histogram, modifying it as necessary
 func (h *Histogram) Add(value float64) {
-	if h.Count < math.MaxUint64 {
-		h.Count += 1
-	} else {
-		panic("Integer overflow: Maximum count exceeded in ghist Histogram")
+	if h.Count == math.MaxUint64 {
+		panic("Integer overflow: Attempt to exceed maximum record count in ghist Histogram")
 	}
+	h.Count += 1
+
 	// see if it fits in an existing bin
 	index := sort.Search(len(h.bins), func(i int) bool { return value >= h.bins[i].min })
 	if index < len(h.bins) && h.bins[index].max >= value {
