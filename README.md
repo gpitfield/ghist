@@ -1,6 +1,8 @@
 # ghist
 Ghist implements a streaming histogram in Go, loosely along the lines of http://jmlr.org/papers/volume11/ben-haim10a/ben-haim10a.pdf.
 
+It's spelled *ghist* because it's a Go Histogram, and it's pronounced *gist*, because that's what a streaming histogram provides.
+
 To use ghist, instantiate a new histogram with ghist.New(binCount), where binCount is the number of bins you want in the histogram.
 
 As values stream in, add them to the histogram with AddValue(value float64).
