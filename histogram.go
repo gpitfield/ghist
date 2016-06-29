@@ -13,22 +13,22 @@ import (
 
 // Histogram maintains a distribution of Size populated bins
 type Histogram struct {
-	Count int
+	Count uint64
 	bins  []Bin
 	Size  int
 }
 
 // Bin keeps track of a histogram bin's minimum and maximum values and count
 type Bin struct {
-	max   float32
-	min   float32
-	count uint32
+	max   float64
+	min   float64
+	count uint64
 }
 
 var zero = Bin{} // for empty comparisons
 
-// AddValue adds a float32 value to the histogram, modifying it as necessary
-func (h *Histogram) AddValue(value float32) {
+// Add adds a float64 value to the histogram, modifying it as necessary
+func (h *Histogram) Add(value float64) {
 	h.Count += 1
 	// see if it fits in an existing bin
 	index := sort.Search(len(h.bins), func(i int) bool { return value >= h.bins[i].min })
@@ -50,22 +50,32 @@ func (h *Histogram) AddValue(value float32) {
 	h.merge(h.closest())
 }
 
-// Value percentile returns a float32 of the percentile of a given value in the histogram
-func (h *Histogram) ValuePercentile(value float32) (percentile float32) {
-	var position uint32
+// Add32 adds a float32 to the histogram, converting it to a float64
+func (h *Histogram) Add32(value float32) {
+	h.Add(float64(value))
+}
+
+// Percentile returns a float64 of the percentile of a given value in the histogram
+func (h *Histogram) Percentile(value float64) (percentile float64) {
+	var position uint64
 	for i := h.Size - 1; i >= 0; i-- { // iterate in reverse to get a percentile
 		if value > h.bins[i].max {
 			position += h.bins[i].count
 		} else { // linear estimate of value's position in its bin
-			pct := float32(1.0)
-			if h.bins[i].max-h.bins[i].min > float32(0.0) {
+			pct := 1.0
+			if h.bins[i].max-h.bins[i].min > 0.0 {
 				pct = (value - h.bins[i].min) / (h.bins[i].max - h.bins[i].min)
 			}
-			position += uint32(float32(h.bins[i].count) * pct)
+			position += uint64(float64(h.bins[i].count) * pct)
 			break
 		}
 	}
-	return float32(position) / float32(h.Count)
+	return float64(position) / float64(h.Count)
+}
+
+// Percentile32 returns a float32 of the percentile of a given value in the histogram
+func (h *Histogram) Percentile32(value float32) (percentile float32) {
+	return float32(h.Percentile(float64(value)))
 }
 
 // sort Interface
@@ -91,7 +101,7 @@ func (h *Histogram) merge(i int, j int) {
 
 // closest returns the indexes i, j of the two adjacent bins that span the smallest total distance
 func (h *Histogram) closest() (i int, j int) {
-	var gap float32
+	var gap float64
 	i = 0
 	minGap := h.bins[0].max - h.bins[len(h.bins)-1].min
 	for pos, bin := range h.bins[0 : len(h.bins)-1] {

@@ -3,9 +3,9 @@ Ghist implements a streaming histogram in Go, loosely along the lines of http://
 
 To use ghist, instantiate a new histogram with ghist.New(binCount), where binCount is the number of bins you want in the histogram.
 
-As values stream in, add them to the histogram with AddValue(value float64).
+As values stream in, add them to the histogram with Add(value float64).
 
-To find the percentile of a value, use ValuePercentile(value float64).
+To find the percentile of a value, use Percentile(value float64).
 
 Streaming histograms dynamically resize bins, trying to maintain as much information resolution in the histogram as possible. 
 For most uses, a binCount < 100 is fine.
