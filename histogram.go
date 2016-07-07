@@ -14,16 +14,18 @@ import (
 
 // Histogram maintains a distribution of Size populated bins
 type Histogram struct {
-	Count uint64
 	Bins  []Bin
 	Size  int
+	Count uint64
+	Sum   float64
 }
 
-// Bin keeps track of a histogram bin's minimum and maximum values and count
+// Bin keeps track of a histogram bin's minimum and maximum values, count, and sum
 type Bin struct {
 	Max   float64
 	Min   float64
 	Count uint64
+	Sum   float64
 }
 
 var zero = Bin{} // for empty comparisons
@@ -34,16 +36,18 @@ func (h *Histogram) Add(value float64) {
 		panic("Integer overflow: Attempt to exceed maximum Count in ghist Histogram")
 	}
 	h.Count += 1
+	h.Sum += value
 
 	// see if it fits in an existing bin
 	index := sort.Search(len(h.Bins), func(i int) bool { return value >= h.Bins[i].Min })
 	if index < len(h.Bins) && h.Bins[index].Max >= value {
 		h.Bins[index].Count += 1
+		h.Bins[index].Sum += value
 		return
 	}
 
 	// if not, insert it where it belongs in the order
-	bin := Bin{Min: value, Max: value, Count: 1}
+	bin := Bin{Min: value, Max: value, Count: 1, Sum: value}
 	h.Bins = h.Bins[0 : h.Size+1] // grow the bins slice by one
 	if index == len(h.Bins) {     // we go at the very end since we're too small
 		h.Bins[h.Size] = bin
@@ -58,29 +62,6 @@ func (h *Histogram) Add(value float64) {
 // Add32 adds a float32 to the histogram, converting it to a float64
 func (h *Histogram) Add32(value float32) {
 	h.Add(float64(value))
-}
-
-// Percentile returns a float64 of the percentile of a given value in the histogram
-func (h *Histogram) Percentile(value float64) (percentile float64) {
-	var position uint64
-	for i := h.Size - 1; i >= 0; i-- { // iterate in reverse to get a percentile
-		if value > h.Bins[i].Max {
-			position += h.Bins[i].Count
-		} else { // linear estimate of value's position in its bin
-			pct := 1.0
-			if h.Bins[i].Max-h.Bins[i].Min > 0.0 {
-				pct = (value - h.Bins[i].Min) / (h.Bins[i].Max - h.Bins[i].Min)
-			}
-			position += uint64(float64(h.Bins[i].Count) * pct)
-			break
-		}
-	}
-	return float64(position) / float64(h.Count)
-}
-
-// Percentile32 returns a float32 of the percentile of a given value in the histogram
-func (h *Histogram) Percentile32(value float32) (percentile float32) {
-	return float32(h.Percentile(float64(value)))
 }
 
 // sort Interface
@@ -98,6 +79,7 @@ func (h *Histogram) merge(i int, j int) {
 	// merge j into i
 	h.Bins[i].Min = h.Bins[j].Min
 	h.Bins[i].Count += h.Bins[j].Count
+	h.Bins[i].Sum += h.Bins[j].Sum
 
 	// slide everyone above j back one
 	copy(h.Bins[j:h.Size], h.Bins[j+1:h.Size+1])
@@ -125,5 +107,6 @@ func New(binCount int) *Histogram {
 		Size:  binCount,
 		Bins:  make([]Bin, binCount+1),
 		Count: 0,
+		Sum:   0,
 	}
 }
