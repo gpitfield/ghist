@@ -15,15 +15,15 @@ import (
 // Histogram maintains a distribution of Size populated bins
 type Histogram struct {
 	Count uint64
-	bins  []Bin
+	Bins  []Bin
 	Size  int
 }
 
 // Bin keeps track of a histogram bin's minimum and maximum values and count
 type Bin struct {
-	max   float64
-	min   float64
-	count uint64
+	Max   float64
+	Min   float64
+	Count uint64
 }
 
 var zero = Bin{} // for empty comparisons
@@ -31,25 +31,25 @@ var zero = Bin{} // for empty comparisons
 // Add adds a float64 value to the histogram, modifying it as necessary
 func (h *Histogram) Add(value float64) {
 	if h.Count == math.MaxUint64 {
-		panic("Integer overflow: Attempt to exceed maximum record count in ghist Histogram")
+		panic("Integer overflow: Attempt to exceed maximum Count in ghist Histogram")
 	}
 	h.Count += 1
 
 	// see if it fits in an existing bin
-	index := sort.Search(len(h.bins), func(i int) bool { return value >= h.bins[i].min })
-	if index < len(h.bins) && h.bins[index].max >= value {
-		h.bins[index].count += 1
+	index := sort.Search(len(h.Bins), func(i int) bool { return value >= h.Bins[i].Min })
+	if index < len(h.Bins) && h.Bins[index].Max >= value {
+		h.Bins[index].Count += 1
 		return
 	}
 
 	// if not, insert it where it belongs in the order
-	bin := Bin{min: value, max: value, count: 1}
-	h.bins = h.bins[0 : h.Size+1] // grow the bins slice by one
-	if index == len(h.bins) {     // we go at the very end since we're too small
-		h.bins[h.Size] = bin
+	bin := Bin{Min: value, Max: value, Count: 1}
+	h.Bins = h.Bins[0 : h.Size+1] // grow the bins slice by one
+	if index == len(h.Bins) {     // we go at the very end since we're too small
+		h.Bins[h.Size] = bin
 	} else { // we go before the index because we're larger than its max
-		copy(h.bins[index+1:], h.bins[index:])
-		h.bins[index] = bin
+		copy(h.Bins[index+1:], h.Bins[index:])
+		h.Bins[index] = bin
 	}
 
 	h.merge(h.closest())
@@ -64,14 +64,14 @@ func (h *Histogram) Add32(value float32) {
 func (h *Histogram) Percentile(value float64) (percentile float64) {
 	var position uint64
 	for i := h.Size - 1; i >= 0; i-- { // iterate in reverse to get a percentile
-		if value > h.bins[i].max {
-			position += h.bins[i].count
+		if value > h.Bins[i].Max {
+			position += h.Bins[i].Count
 		} else { // linear estimate of value's position in its bin
 			pct := 1.0
-			if h.bins[i].max-h.bins[i].min > 0.0 {
-				pct = (value - h.bins[i].min) / (h.bins[i].max - h.bins[i].min)
+			if h.Bins[i].Max-h.Bins[i].Min > 0.0 {
+				pct = (value - h.Bins[i].Min) / (h.Bins[i].Max - h.Bins[i].Min)
 			}
-			position += uint64(float64(h.bins[i].count) * pct)
+			position += uint64(float64(h.Bins[i].Count) * pct)
 			break
 		}
 	}
@@ -85,9 +85,9 @@ func (h *Histogram) Percentile32(value float32) (percentile float32) {
 
 // sort Interface
 // Sort the histogram in descending order for compatibility with sort.Search mechanics
-func (h Histogram) Len() int           { return len(h.bins) }
-func (h Histogram) Swap(i, j int)      { h.bins[i], h.bins[j] = h.bins[j], h.bins[i] }
-func (h Histogram) Less(i, j int) bool { return h.bins[i].min > h.bins[j].max }
+func (h Histogram) Len() int           { return len(h.Bins) }
+func (h Histogram) Swap(i, j int)      { h.Bins[i], h.Bins[j] = h.Bins[j], h.Bins[i] }
+func (h Histogram) Less(i, j int) bool { return h.Bins[i].Min > h.Bins[j].Max }
 
 // merge merges bin j into bin i
 func (h *Histogram) merge(i int, j int) {
@@ -96,21 +96,21 @@ func (h *Histogram) merge(i int, j int) {
 		i, j = j, i
 	}
 	// merge j into i
-	h.bins[i].min = h.bins[j].min
-	h.bins[i].count += h.bins[j].count
+	h.Bins[i].Min = h.Bins[j].Min
+	h.Bins[i].Count += h.Bins[j].Count
 
 	// slide everyone above j back one
-	copy(h.bins[j:h.Size], h.bins[j+1:h.Size+1])
-	h.bins = h.bins[0:h.Size]
+	copy(h.Bins[j:h.Size], h.Bins[j+1:h.Size+1])
+	h.Bins = h.Bins[0:h.Size]
 }
 
 // closest returns the indexes i, j of the two adjacent bins that span the smallest total distance
 func (h *Histogram) closest() (i int, j int) {
 	var gap float64
 	i = 0
-	minGap := h.bins[0].max - h.bins[len(h.bins)-1].min
-	for pos, bin := range h.bins[0 : len(h.bins)-1] {
-		gap = bin.max - h.bins[pos+1].min
+	minGap := h.Bins[0].Max - h.Bins[len(h.Bins)-1].Min
+	for pos, bin := range h.Bins[0 : len(h.Bins)-1] {
+		gap = bin.Max - h.Bins[pos+1].Min
 		if gap < minGap {
 			minGap = gap
 			i = pos
@@ -123,7 +123,7 @@ func (h *Histogram) closest() (i int, j int) {
 func New(binCount int) *Histogram {
 	return &Histogram{
 		Size:  binCount,
-		bins:  make([]Bin, binCount+1),
+		Bins:  make([]Bin, binCount+1),
 		Count: 0,
 	}
 }
