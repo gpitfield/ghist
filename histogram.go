@@ -4,6 +4,13 @@ Package ghist implements a streaming histogram.
 ghist generates streaming histograms of float32 values in specified bin counts.
 For most applications, a bin count <100 is likely sufficient.
 Based loosely on http://jmlr.org/papers/volume11/ben-haim10a/ben-haim10a.pdf.
+
+Optionally, MaxBinRatio can be set to an integer value which is the maximum population,
+as a multiple of its expected population under an even distribution, that any bin pair
+can contain to be elibible to merge. For example, in a 50 bin Histogram, if the MaxBinRatio is 5,
+then any bins with > (1/Histogram.Size * MaxBinRatio) = 10% combined of the population
+cannot be merged. This can be useful for populations with high kurtosis to preserve
+resolution in the main population mass.
 */
 package ghist
 
@@ -14,10 +21,11 @@ import (
 
 // Histogram maintains a distribution of Size populated bins
 type Histogram struct {
-	Bins  []Bin
-	Size  int
-	Count uint64
-	Sum   float64
+	Bins        []Bin
+	Size        int
+	Count       uint64
+	Sum         float64
+	MaxBinRatio uint32 // Maximum multiple of an even distribution that any Bin can have; values less than 2 are ignored.
 }
 
 // Bin keeps track of a histogram bin's minimum and maximum values, count, and sum
@@ -86,14 +94,19 @@ func (h *Histogram) merge(i int, j int) {
 	h.Bins = h.Bins[0:h.Size]
 }
 
-// closest returns the indexes i, j of the two adjacent bins that span the smallest total distance
+// closest returns the indexes i, j of the two adjacent bins that span the smallest total distance,
+// subject to neither being over the MaxBinRatio
 func (h *Histogram) closest() (i int, j int) {
 	var gap float64
 	i = 0
+	maxPop := h.Count
+	if h.MaxBinRatio > 1 {
+		maxPop = uint64(float64(maxPop) / float64(h.Size) * float64(h.MaxBinRatio))
+	}
 	minGap := h.Bins[0].Max - h.Bins[len(h.Bins)-1].Min
 	for pos, bin := range h.Bins[0 : len(h.Bins)-1] {
 		gap = bin.Max - h.Bins[pos+1].Min
-		if gap < minGap {
+		if gap < minGap && (bin.Count+h.Bins[pos+1].Count) < maxPop {
 			minGap = gap
 			i = pos
 		}
@@ -108,5 +121,16 @@ func New(binCount int) *Histogram {
 		Bins:  make([]Bin, binCount+1),
 		Count: 0,
 		Sum:   0,
+	}
+}
+
+// New returns a new Histogram with binCount bins and maxBinRatio
+func NewRatioHistogram(binCount int, maxBinRatio uint32) *Histogram {
+	return &Histogram{
+		Size:        binCount,
+		Bins:        make([]Bin, binCount+1),
+		Count:       0,
+		Sum:         0,
+		MaxBinRatio: maxBinRatio,
 	}
 }
