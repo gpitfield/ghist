@@ -34,8 +34,11 @@ func (h *Histogram) Median() (median float64) {
 	for i := 0; i < h.Size; i++ {
 		seenCount += h.Bins[i].Count
 		if seenCount >= midPoint {
-			offset := 1 - (float64(seenCount-midPoint) / float64(h.Bins[i].Count-1))
-			return h.Bins[i].Max - offset*(h.Bins[i].Max-h.Bins[i].Min)
+			if h.Bins[i].Count > 1 {
+				offset := 1 - (float64(seenCount-midPoint) / float64(h.Bins[i].Count-1))
+				return h.Bins[i].Max - offset*(h.Bins[i].Max-h.Bins[i].Min)
+			}
+			return h.Bins[i].Max
 		}
 	}
 	return

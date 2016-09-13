@@ -45,7 +45,6 @@ func (h *Histogram) Add(value float64) {
 	}
 	h.Count += 1
 	h.Sum += value
-
 	// see if it fits in an existing bin
 	index := sort.Search(len(h.Bins), func(i int) bool { return value >= h.Bins[i].Min })
 	if index < len(h.Bins) && h.Bins[index].Max >= value {
@@ -102,6 +101,9 @@ func (h *Histogram) closest() (i int, j int) {
 	maxPop := h.Count
 	if h.MaxBinRatio > 1 {
 		maxPop = uint64(float64(maxPop) / float64(h.Size) * float64(h.MaxBinRatio))
+	}
+	if maxPop == 0 {
+		maxPop = 1
 	}
 	minGap := h.Bins[0].Max - h.Bins[len(h.Bins)-1].Min
 	for pos, bin := range h.Bins[0 : len(h.Bins)-1] {
