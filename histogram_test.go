@@ -1,6 +1,7 @@
 package ghist
 
 import (
+	"math"
 	"testing"
 )
 
@@ -85,8 +86,8 @@ func TestHistogram(t *testing.T) {
 	if pct := hist.Percentile(-9.0); pct != 0.0 {
 		t.Fatalf("Wrong percentile for value -9.0; got %f expected %f\n", pct, 0.0)
 	}
-	if pct := hist.Percentile(8.0); pct != 1.0 {
-		t.Fatalf("Wrong percentile for value 8.0; got %f expected %f\n", pct, 1.0)
+	if pct := hist.Percentile(8.0); math.Floor(pct*100) != 90 {
+		t.Fatalf("Wrong percentile for value 8.0; got %f expected %f\n", pct, 0.9091)
 	}
 	if pct := hist.Percentile(0.0); pct != 30.0/55.0 {
 		t.Fatalf("Wrong percentile for value 0.0; got %f expected %f\n", pct, 30.0/55.0)

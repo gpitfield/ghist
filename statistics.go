@@ -7,7 +7,7 @@ func (h *Histogram) Percentile(value float64) (percentile float64) {
 		if value > h.Bins[i].Max {
 			position += h.Bins[i].Count
 		} else { // linear estimate of value's position in its bin
-			pct := 1.0
+			pct := 0.5
 			if h.Bins[i].Max-h.Bins[i].Min > 0.0 {
 				pct = (value - h.Bins[i].Min) / (h.Bins[i].Max - h.Bins[i].Min)
 			}
