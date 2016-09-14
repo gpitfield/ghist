@@ -4,9 +4,12 @@ package ghist
 func (h *Histogram) Percentile(value float64) (percentile float64) {
 	var position uint64
 	for i := h.Size - 1; i >= 0; i-- { // iterate in reverse to get a percentile
+		if h.Bins[i].Count == 0 {
+			continue
+		}
 		if value > h.Bins[i].Max {
 			position += h.Bins[i].Count
-		} else { // linear estimate of value's position in its bin
+		} else if value >= h.Bins[i].Min { // linear estimate of value's position in its bin
 			pct := 0.5
 			if h.Bins[i].Max-h.Bins[i].Min > 0.0 {
 				pct = (value - h.Bins[i].Min) / (h.Bins[i].Max - h.Bins[i].Min)

@@ -16,5 +16,5 @@ func (h Histogram) String() (str string) {
 }
 
 func (b Bin) String() string {
-	return fmt.Sprintf("%d in [%2f:%2f] totaling %2f", b.Count, b.Max, b.Min, b.Sum)
+	return fmt.Sprintf("%d in [%.10f:%.10f] totaling %f", b.Count, b.Max, b.Min, b.Sum)
 }
